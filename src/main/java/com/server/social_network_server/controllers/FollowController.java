@@ -1,20 +1,24 @@
 package com.server.social_network_server.controllers;
 
+import com.server.social_network_server.dto.FollowRequests;
+import com.server.social_network_server.dto.UserWithStatus;
 import com.server.social_network_server.entities.Follow;
 import com.server.social_network_server.entities.User;
 import com.server.social_network_server.response.BasicResponse;
 import com.server.social_network_server.response.UserListResponse;
+import com.server.social_network_server.response.UserWithStatusResponse;
 import com.server.social_network_server.response.followCountResponse;
 import com.server.social_network_server.utils.DbUtils;
 import com.server.social_network_server.utils.Error;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+//@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 public class FollowController {
 
@@ -25,10 +29,13 @@ public class FollowController {
     @Autowired
     private Follow follow;
 
-    @RequestMapping("/follow-user")
-    public BasicResponse followUser(int followerUserId, int targetUserId){
+    @PostMapping("/follow-user")
+    public BasicResponse followUser(@RequestBody FollowRequests request){
         // followerUserId = המשתמש שמחובר (אני)
         // targetUserId = המשתמש שאני רוצה לעקוב אחריו (הוא)
+        int followerUserId = request.getFollowerUserId();
+        int targetUserId = request.getTargetUserId();
+
         if (followerUserId == targetUserId){
             return new BasicResponse(false, Error.ERROR_SAME_USER);
         }

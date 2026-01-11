@@ -11,7 +11,7 @@ import com.server.social_network_server.utils.HashGen;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
+//@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 @RestController
 public class UserController {
 
@@ -21,8 +21,8 @@ public class UserController {
     @Autowired
     private HashGen hashGen;
 
-    @Autowired
-    private User user;
+    //@Autowired
+    //private User user;
 
 
     @RequestMapping("/allUsers")

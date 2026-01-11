@@ -68,6 +68,7 @@ public class User {
 
     }
 
+
     public boolean checkStrongPassword(String password){
         boolean hasUpper = false;
         boolean hasLower= false;
@@ -165,5 +166,21 @@ public class User {
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                ", pictureUrl='" + pictureUrl + '\'' +
+                ", description='" + description + '\'' +
+                ", city='" + city + '\'' +
+                ", country='" + country + '\'' +
+                ", createdAt=" + createdAt +
+                '}';
     }
 }

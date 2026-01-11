@@ -1,5 +1,6 @@
 package com.server.social_network_server.utils;
 
+import com.server.social_network_server.dto.UserWithStatus;
 import com.server.social_network_server.entities.User;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
@@ -218,6 +219,7 @@ public class DbUtils {
                 followingUserList.add(new User(id, firstName, lastName, username, profileImage));
             }
             return followingUserList;
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -284,17 +286,17 @@ public class DbUtils {
     public User editUser(int userId, String firstName, String lastName, String city, String country, String imageUrl, String description){
         try {
             PreparedStatement statement = this.connection.prepareStatement(
-                    "UPDATE users SET first_name = ? , last_name = ? , city = ? , country = ? , description = ? , profile_image_url = ?" +
-                            "WHERE id = ?");
-            statement.setString(1, firstName);
-            statement.setString(2, lastName);
-            statement.setString(3, city);
-            statement.setString(4, country);
-            statement.setString(5, description);
-            statement.setString(6, imageUrl);
-            statement.setInt(7, userId);
+                    "UPDATE users SET first_name = ? , last_name = ? , city = ? , country = ? , description = ? , profile_image_url = ? " +
+                            "WHERE id = ?")) {
+            statement.setString(1, user.getFirstName());
+            statement.setString(2, user.getLastName());
+            statement.setString(3, user.getCity());
+            statement.setString(4, user.getCountry());
+            statement.setString(5, user.getDescription());
+            statement.setString(6, user.getPictureUrl());
+            statement.setInt(7, user.getId());
             if (statement.executeUpdate() == 1){
-                return new User(userId, firstName, lastName, imageUrl, description, city, country);
+                return getUserById(user.getId());
             }
             return null;
         } catch (SQLException e) {
