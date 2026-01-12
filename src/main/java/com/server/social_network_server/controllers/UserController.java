@@ -86,15 +86,24 @@ public class UserController {
 
     // myUserId - connected user - will change to get from cookies :D
     @RequestMapping("/get-user-info")
-    public BasicResponse getUserInfo(int myUserId, int targetUserId){
-        User user = dbUtils.getUser(targetUserId);
+    public BasicResponse getUserInfo(int myUserId, Integer targetUserId, String targetUsername){
+        User user = null;
+        if (targetUserId != null) {
+            user = dbUtils.getUserById(targetUserId);
+        }
+        else if (targetUsername != null && !targetUsername.isEmpty()) {
+            user = dbUtils.getUserByUsername(targetUsername);
+        }
+
         if (user != null){
+            int foundUserId = user.getId();
+
             boolean following = false;
-            if (dbUtils.isUserFollowUser(myUserId, targetUserId)){
+            if (dbUtils.isUserFollowUser(myUserId, foundUserId)){
                 following = true;
             }
-            int followingCount = dbUtils.getFollowingCount(targetUserId);
-            int followersCount = dbUtils.getFollowersCount(targetUserId);
+            int followingCount = dbUtils.getFollowingCount(foundUserId);
+            int followersCount = dbUtils.getFollowersCount(foundUserId);
             return new ProfileResponse(true, null, user, following, followingCount, followersCount);
         } else {
             return new BasicResponse(false, Error.ERROR_TARGET_USER_NOT_EXIST);
@@ -102,10 +111,11 @@ public class UserController {
     }
 
     @PostMapping("/update-user")
-    public BasicResponse updateUser(int userId, String firstName, String lastName, String city, String country, String imageUrl, String description){
-        User user = dbUtils.editUser(userId, firstName, lastName, city, country, imageUrl, description);
+    public BasicResponse updateUser(@RequestBody User user){
         if (user != null){
-            return new UserResponse(true, null, user);
+            User updatedUser = dbUtils.editUser(user);
+            System.out.println(updatedUser);
+            return new UserResponse(true, null, updatedUser);
         }
         return new BasicResponse(false, Error.ERROR_UPDATE_FAILED);
     }

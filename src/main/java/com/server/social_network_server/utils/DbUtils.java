@@ -53,11 +53,37 @@ public class DbUtils {
         return users;
     }
 
-    public User getUser(int targetUserId){
+    public User getUserById(int targetUserId){
         try {
             PreparedStatement statement = this.connection.prepareStatement(
                     "SELECT id, first_name, last_name, username, profile_image_url, description, city, country, created_at FROM users WHERE id = ?");
             statement.setInt(1, targetUserId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                int id = resultSet.getInt("id");
+                String firstName = resultSet.getString("first_name");
+                String lastName = resultSet.getString("last_name");
+                String username = resultSet.getString("username");
+                String profileImage = resultSet.getString("profile_image_url");
+                String description = resultSet.getString("description");
+                String city = resultSet.getString("city");
+                String country = resultSet.getString("country");
+                LocalDateTime createdAt = resultSet.getObject("created_at", LocalDateTime.class);
+
+                return new User(id, firstName, lastName, username, profileImage, description, city, country, createdAt);
+            }
+
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public User getUserByUsername(String targetUserId){
+        try {
+            PreparedStatement statement = this.connection.prepareStatement(
+                    "SELECT id, first_name, last_name, username, profile_image_url, description, city, country, created_at FROM users WHERE username = ?");
+            statement.setString(1, targetUserId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
                 int id = resultSet.getInt("id");
@@ -128,7 +154,7 @@ public class DbUtils {
     public User loginCheck(String username, String password){
         try {
             PreparedStatement statement = this.connection.prepareStatement(
-                    "SELECT id, first_name, last_name, username, profile_image_url FROM users WHERE username = ?" +
+                    "SELECT id, first_name, last_name, username, profile_image_url, created_at, city, country, description FROM users WHERE username = ?" +
                             "AND password_hash = ?");
             statement.setString(1, username);
             statement.setString(2, password);
@@ -139,7 +165,13 @@ public class DbUtils {
                 String lastName = resultSet.getString("last_name");
                 String dbUsername = resultSet.getString("username");
                 String profileImage = resultSet.getString("profile_image_url");
-                return new User(id, firstName, lastName, dbUsername, profileImage);
+                LocalDateTime createdAt = resultSet.getObject("created_at", LocalDateTime.class);
+                String city = resultSet.getString("city");
+                String country = resultSet.getString("country");
+                String description = resultSet.getString("description");
+
+
+                return new User(id, firstName, lastName, dbUsername, profileImage, description, city, country,createdAt );
             }
             return null;
         } catch (SQLException e) {
@@ -200,9 +232,9 @@ public class DbUtils {
     }
 
     // מחזיר יוזרים שאני עוקב אחריהם!
-    public List<User> getFollowingUsers(int targetUserId){
+    public List<UserWithStatus> getFollowingUsers(int currentUserId, int targetUserId){
         try {
-            List<User> followingUserList = new ArrayList<>();
+            List<UserWithStatus> followingUserList = new ArrayList<>();
 
             PreparedStatement statement = this.connection.prepareStatement(
                     "SELECT id, first_name, last_name, username, profile_image_url FROM users WHERE id IN" +
@@ -216,7 +248,10 @@ public class DbUtils {
                 String username = resultSet.getString("username");
                 String profileImage = resultSet.getString("profile_image_url");
 
-                followingUserList.add(new User(id, firstName, lastName, username, profileImage));
+                User user = new User(id, firstName, lastName, username, profileImage);
+                boolean isFollow = isUserFollowUser(currentUserId, id);
+
+                followingUserList.add(new UserWithStatus(user, isFollow));
             }
             return followingUserList;
 
@@ -227,9 +262,9 @@ public class DbUtils {
 
 
     // מחזיר יוזרים שעוקבים אחריי!
-    public List<User> getFollowersUsers(int targetUserId){
+    public List<UserWithStatus> getFollowersUsers(int currentUserId,int targetUserId){
         try {
-            List<User> followingUserList = new ArrayList<>();
+            List<UserWithStatus> followingUserList = new ArrayList<>();
 
             PreparedStatement statement = this.connection.prepareStatement(
                     "SELECT id, first_name, last_name, username, profile_image_url FROM users WHERE id IN" +
@@ -243,7 +278,10 @@ public class DbUtils {
                 String username = resultSet.getString("username");
                 String profileImage = resultSet.getString("profile_image_url");
 
-                followingUserList.add(new User(id, firstName, lastName, username, profileImage));
+                User user = new User(id, firstName, lastName, username, profileImage);
+                boolean isFollow = isUserFollowUser(currentUserId, id);
+
+                followingUserList.add(new UserWithStatus(user, isFollow));
             }
             return followingUserList;
         } catch (SQLException e) {
@@ -283,8 +321,8 @@ public class DbUtils {
         return 0;
     }
 
-    public User editUser(int userId, String firstName, String lastName, String city, String country, String imageUrl, String description){
-        try {
+    public User editUser(User user){
+        try (
             PreparedStatement statement = this.connection.prepareStatement(
                     "UPDATE users SET first_name = ? , last_name = ? , city = ? , country = ? , description = ? , profile_image_url = ? " +
                             "WHERE id = ?")) {

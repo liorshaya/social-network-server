@@ -52,8 +52,11 @@ public class FollowController {
 
     }
 
-    @RequestMapping("/remove-follow")
-    public BasicResponse removeFollow(int followerUserId, int targetUserId){
+    @PostMapping("/remove-follow")
+    public BasicResponse removeFollow(@RequestBody FollowRequests request){
+        int followerUserId = request.getFollowerUserId();
+        int targetUserId = request.getTargetUserId();
+
         if (followerUserId == targetUserId){
             return new BasicResponse(false, Error.ERROR_SAME_USER);
         }
@@ -70,19 +73,23 @@ public class FollowController {
     }
 
     @RequestMapping("/get-following-users")
-    public BasicResponse getFollowingUserList(int targetUserId){
-        if(!dbUtils.isUserIdExist(targetUserId)){
+    public BasicResponse getFollowingUserList(int currentUserId, int targetUserId){
+        if(!dbUtils.isUserIdExist(targetUserId) || !dbUtils.isUserIdExist(currentUserId)){
             return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
         }
-        return new UserListResponse(true, null, dbUtils.getFollowingUsers(targetUserId));
+        List<UserWithStatus> userList = dbUtils.getFollowingUsers(currentUserId, targetUserId);
+
+        return new UserWithStatusResponse(true, null, userList);
     }
 
     @RequestMapping("/get-followers-users")
-    public BasicResponse getFollowersUserList(int targetUserId){
+    public BasicResponse getFollowersUserList(int currentUserId, int targetUserId){
         if(!dbUtils.isUserIdExist(targetUserId)){
             return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
         }
-        return new UserListResponse(true, null, dbUtils.getFollowersUsers(targetUserId));
+        List<UserWithStatus> userList = dbUtils.getFollowersUsers(currentUserId, targetUserId);
+
+        return new UserWithStatusResponse(true, null, userList);
     }
 
     @RequestMapping("/get-followers-count")
