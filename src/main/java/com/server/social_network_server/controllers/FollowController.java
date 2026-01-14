@@ -110,4 +110,21 @@ public class FollowController {
         return new followCountResponse(true, null , followingCount );
     }
 
+    @PostMapping("/remove-follower")
+    public BasicResponse removeFollower(@RequestBody FollowRequests request){
+        int userId = request.getFollowerUserId();
+        int targetUserId = request.getTargetUserId();
+
+        if(!dbUtils.isUserIdExist(userId)){
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+        if(!dbUtils.isUserIdExist(targetUserId)){
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+        if(dbUtils.removeFollower(userId, targetUserId)){
+            return new BasicResponse(true, null);
+        }
+        return new BasicResponse(false, Error.ERROR_UPDATE_FAILED);
+    }
+
 }

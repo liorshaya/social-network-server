@@ -343,6 +343,20 @@ public class DbUtils {
 
     }
 
+    public boolean removeFollower(int userId , int targetUserId){
+        try {
+            PreparedStatement statement = this.connection.prepareStatement(
+                    "DELETE FROM user_follows WHERE followers_id = ? AND target_user_id = ?"
+            );
+            statement.setInt(1, targetUserId);
+            statement.setInt(2,userId);
+            return statement.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
 
 
 
