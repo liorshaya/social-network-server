@@ -57,6 +57,7 @@ public class User {
         this.createdAt = createdAt;
 
     }
+
     public User(int id, String firstName, String lastName , String profileImage, String description, String city, String country) {
         this.id = id;
         this.firstName = firstName;
@@ -67,6 +68,21 @@ public class User {
         this.country = country;
 
     }
+
+
+    public User( String firstName, int id, String lastName , String description, String city, String country) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.description = description;
+        this.city = city;
+        this.country = country;
+    }
+
+    public static User createWithUsername(int id, String firstName, String lastName, String description, String city, String country){
+        return new User(firstName, id, lastName, description, city, country);
+    }
+
 
 
     public boolean checkStrongPassword(String password){

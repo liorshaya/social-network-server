@@ -5,11 +5,15 @@ import com.server.social_network_server.response.ProfileResponse;
 import com.server.social_network_server.response.UserListResponse;
 import com.server.social_network_server.response.BasicResponse;
 import com.server.social_network_server.response.UserResponse;
+import com.server.social_network_server.service.CloudinaryService;
 import com.server.social_network_server.utils.DbUtils;
 import com.server.social_network_server.utils.Error;
 import com.server.social_network_server.utils.HashGen;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import static com.server.social_network_server.entities.User.createWithUsername;
 
 //@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 @RestController
@@ -20,6 +24,8 @@ public class UserController {
 
     @Autowired
     private HashGen hashGen;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     //@Autowired
     //private User user;
@@ -111,12 +117,34 @@ public class UserController {
     }
 
     @PostMapping("/update-user")
-    public BasicResponse updateUser(@RequestBody User user){
-        if (user != null){
-            User updatedUser = dbUtils.editUser(user);
-            System.out.println(updatedUser);
+    public BasicResponse updateUser(@RequestParam int userId, @RequestParam String firstName, @RequestParam String lastName,
+                                    @RequestParam String description, @RequestParam String city,
+                                    @RequestParam String country, @RequestParam(value = "file", required = false) MultipartFile file){
+
+        User existingUser = dbUtils.getUserById(userId);
+
+        if (existingUser == null){
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+
+        existingUser.setFirstName(firstName);
+        existingUser.setLastName(lastName);
+        existingUser.setDescription(description);
+        existingUser.setCity(city);
+        existingUser.setCountry(country);
+
+        if (file != null && !file.isEmpty()){
+            String newImageUrl = cloudinaryService.uploadImage(file);
+            if (newImageUrl != null){
+                existingUser.setPictureUrl(newImageUrl);
+            }
+        }
+
+        User updatedUser = dbUtils.editUser(existingUser);
+        if (updatedUser != null){
             return new UserResponse(true, null, updatedUser);
         }
+
         return new BasicResponse(false, Error.ERROR_UPDATE_FAILED);
     }
 
