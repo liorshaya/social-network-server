@@ -1,6 +1,8 @@
 package com.server.social_network_server.utils;
 
+import com.server.social_network_server.dto.PostDto;
 import com.server.social_network_server.dto.UserWithStatus;
+import com.server.social_network_server.entities.Post;
 import com.server.social_network_server.entities.User;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
@@ -357,7 +359,133 @@ public class DbUtils {
 
     }
 
+    public PostDto getPostById(int postId){
+        String sql = "SELECT " +
+                "p.id, p.content, p.picture_url, p.created_at, p.user_id, " +
+                "u.first_name, u.last_name, u.username, u.profile_image_url, " +
+                "(SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count, " +
+                "(SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count " +
+                "FROM posts p " +
+                "JOIN users u ON p.user_id = u.id " +
+                "WHERE p.id = ?";
+        try (PreparedStatement statement = this.connection.prepareStatement(sql)){
+            statement.setInt(1, postId);
+            try (ResultSet rs = statement.executeQuery()){
+                if(rs.next()){
+                    PostDto postDto = new PostDto();
+                    postDto.setId(rs.getInt("id"));
+                    postDto.setContent(rs.getString("content"));
+                    postDto.setPictureUrl(rs.getString("picture_url"));
+                    postDto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    postDto.setAuthorId(rs.getInt("user_id"));
+                    postDto.setAuthorFirstName(rs.getString("first_name"));
+                    postDto.setAuthorLastName(rs.getString("last_name"));
+                    postDto.setAuthorUsername(rs.getString("username"));
+                    postDto.setAuthorProfileImage(rs.getString("profile_image_url"));
 
+                    postDto.setLikeCount(rs.getInt("like_count"));
+                    postDto.setCommentCount(rs.getInt("comment_count"));
+
+                    return postDto;
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    public PostDto addPost(Post post){
+        String sql = "INSERT INTO posts (user_id, content, picture_url) VALUES (?, ?, ?)";
+        try(PreparedStatement statement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+            statement.setInt(1, post.getUserId());
+            statement.setString(2, post.getContent());
+            statement.setString(3, post.getPictureUrl());
+
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows == 0) {
+                return null;
+            }
+
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    int newId = generatedKeys.getInt(1);
+                    return getPostById(newId);
+
+                }
+            }
+        } catch (SQLException e) {
+            e.getStackTrace();
+        }
+        return null;
+    }
+
+    public boolean deletePost(int postId){
+        try(PreparedStatement statement = this.connection.prepareStatement("DELETE FROM posts WHERE id = ?")){
+            statement.setInt(1,postId);
+
+            return statement.executeUpdate() == 1;
+
+        } catch (SQLException e) {
+            e.getStackTrace();
+        }
+        return false;
+    }
+
+    public List<PostDto> getPostsByUserId(int profileId, int viewerId, int page) {
+        int limit = 10;
+        int offset = (page - 1) * limit;
+
+        String sql =
+                "SELECT " +
+                        "   p.id, p.content, p.picture_url, p.created_at, p.user_id, " +
+                        "   u.first_name, u.last_name, u.username, u.profile_image_url, " +
+                        "   (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count, " +
+                        "   (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count, " +
+                        "EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked " +
+                        "FROM posts p " +
+                        "JOIN users u ON p.user_id = u.id " +
+                        "WHERE p.user_id = ? " +
+                        "ORDER BY p.created_at DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        List<PostDto> posts = new ArrayList<>();
+
+        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
+            statement.setInt(1, viewerId);
+            statement.setInt(2, profileId);
+            statement.setInt(3, limit);
+            statement.setInt(4, offset);
+
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    PostDto postDto = new PostDto();
+
+                    postDto.setId(rs.getInt("id"));
+                    postDto.setContent(rs.getString("content"));
+                    postDto.setPictureUrl(rs.getString("picture_url"));
+                    postDto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    postDto.setAuthorId(rs.getInt("user_id"));
+                    postDto.setAuthorFirstName(rs.getString("first_name"));
+                    postDto.setAuthorLastName(rs.getString("last_name"));
+                    postDto.setAuthorUsername(rs.getString("username"));
+                    postDto.setAuthorProfileImage(rs.getString("profile_image_url"));
+                    postDto.setLikeCount(rs.getInt("like_count"));
+                    postDto.setCommentCount(rs.getInt("comment_count"));
+                    postDto.setLiked(rs.getBoolean("is_liked"));
+
+                    posts.add(postDto);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return posts;
+    }
 
 
 

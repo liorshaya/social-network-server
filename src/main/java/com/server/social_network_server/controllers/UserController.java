@@ -27,8 +27,7 @@ public class UserController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
-    //@Autowired
-    //private User user;
+    private User user;
 
 
     @RequestMapping("/allUsers")
@@ -44,16 +43,19 @@ public class UserController {
                 if(username != null && !username.isEmpty()){
                     if(password != null && !password.isEmpty()){
                         if (!dbUtils.isUsernameExists(username)){
-
-                            //if(user.checkStrongPassword(password)){
+                            if(user.checkValidUsername(username)){
+                                //if(user.checkStrongPassword(password)){
                                 String hash_password = this.hashGen.hashSHA(username, password);
                                 User user = new User(firstName, lastName, username, hash_password);
                                 dbUtils.addUser(user);
                                 return new BasicResponse(true,null);
-                            //}
-                            //else {
-                             //   return new BasicResponse(false, Error.ERROR_INVALID_PASSWORD);
-                            //}
+                                //}
+                                //else {
+                                //   return new BasicResponse(false, Error.ERROR_INVALID_PASSWORD);
+                                //}
+                            }else {
+                                return new BasicResponse(false, Error.ERROR_INVALID_USERNAME);
+                            }
 
                         } else {
                             return new BasicResponse(false, Error.ERROR_USERNAME_TAKEN);

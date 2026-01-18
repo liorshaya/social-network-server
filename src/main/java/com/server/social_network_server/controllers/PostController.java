@@ -1,12 +1,19 @@
 package com.server.social_network_server.controllers;
 
+import com.server.social_network_server.dto.PostDto;
+import com.server.social_network_server.entities.Post;
+import com.server.social_network_server.response.BasicResponse;
+import com.server.social_network_server.response.PostListResponse;
+import com.server.social_network_server.response.PostResponse;
 import com.server.social_network_server.service.CloudinaryService;
+import com.server.social_network_server.utils.DbUtils;
+import com.server.social_network_server.utils.Error;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,48 +23,92 @@ public class PostController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
-    // הכתובת תהיה: POST http://localhost:8080/posts/create
+    @Autowired
+    private DbUtils dbUtils;
+
     @PostMapping("/create")
-    public ResponseEntity<Map<String, Object>> createPost(
-            @RequestParam("file") MultipartFile file,        // הקובץ עצמו
-            @RequestParam("description") String description, // הטקסט של הפוסט
-            @RequestParam("userId") Long userId              // ה-ID של המשתמש
+    public BasicResponse createPost(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "content", required = false) String content,
+            @RequestParam("userId") int userId
     ) {
-        Map<String, Object> response = new HashMap<>();
 
         try {
-            // 1. בדיקה שהקובץ לא ריק
-            if (file.isEmpty()) {
-                response.put("success", false);
-                response.put("message", "File is empty");
-                return ResponseEntity.badRequest().body(response);
+            boolean hasFile = (file != null && !file.isEmpty());
+            boolean hasContent = (content != null && !content.trim().isEmpty());
+
+            if (!hasFile && !hasContent) {
+                return new BasicResponse(false, Error.ERROR_MISSING_POST_CONTENT);
             }
 
-            // 2. שליחה ל-Cloudinary דרך הסרביס שלך
-            String imageUrl = cloudinaryService.uploadImage(file);
-
-            if (imageUrl == null) {
-                response.put("success", false);
-                response.put("message", "Upload failed");
-                return ResponseEntity.status(500).body(response);
+            if(!dbUtils.isUserIdExist(userId)){
+                return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
             }
 
-            // --- כאן יבוא השלב של שמירה ל-MySQL (נדבר על זה אח"כ) ---
-            // Post newPost = new Post(userId, description, imageUrl);
-            // postRepository.save(newPost);
-            // ---------------------------------------------------------
+            if (hasContent && content.length() >= 500){
+                return new BasicResponse(false, Error.ERROR_TOO_LONG_CONTENT);
+            }
 
-            // 3. החזרת תשובה לריאקט
-            response.put("success", true);
-            response.put("message", "Uploaded successfully!");
-            response.put("imageUrl", imageUrl); // מחזירים את הלינק כדי שתוכל לראות שזה עבד
+            String imageUrl = null;
 
-            return ResponseEntity.ok(response);
+            if (hasFile) {
+                imageUrl = cloudinaryService.uploadImage(file);
+
+                if (imageUrl == null) {
+                    return new BasicResponse(false, Error.ERROR_FILE_INVALID);
+                }
+            }
+
+            String finalContent = hasContent ? content : "";
+            Post post = new Post(userId, finalContent, imageUrl);
+            PostDto newPost = dbUtils.addPost(post);
+
+            if (newPost != null){
+                return new PostResponse(true, null , newPost);
+            }
 
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Error: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
+            e.printStackTrace();
         }
+        return new BasicResponse(false, Error.ERROR_UPDATE_FAILED);
     }
+
+    @GetMapping("/get-post")
+    public BasicResponse getPost(int postId){
+        PostDto post = dbUtils.getPostById(postId);
+        if(post != null){
+            return new PostResponse(true, null, post);
+        }
+        return new BasicResponse(false,Error.ERROR_POST_NOT_EXIST);
+    }
+
+    @DeleteMapping("/delete-post")
+    public BasicResponse deletePost(@RequestParam int postId, @RequestParam int userId){
+        PostDto post = dbUtils.getPostById(postId);
+        if (post == null) {
+            return new BasicResponse(false,Error.ERROR_POST_NOT_EXIST);
+        }
+        if (post.getAuthorId() != userId) {
+            return new BasicResponse(false, Error.ERROR_NO_PERMISSION);
+        }
+        if (dbUtils.deletePost(postId)){
+            return new BasicResponse(true, null);
+        }
+        return new BasicResponse(false, Error.ERROR_DELETE_POST_FAILED);
+    }
+
+    @GetMapping("/get-user-posts")
+    public BasicResponse getUserPosts(@RequestParam int targetUserId, @RequestParam int currentUserId,
+            @RequestParam(defaultValue = "1") int page) {
+
+        if(!dbUtils.isUserIdExist(targetUserId)){
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+
+        List<PostDto> posts = dbUtils.getPostsByUserId(targetUserId, currentUserId, page);
+
+        return new PostListResponse(true, null, posts);
+    }
+
+
 }

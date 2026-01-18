@@ -104,6 +104,10 @@ public class User {
         return false;
     }
 
+    public boolean checkValidUsername(String username){
+        return username.length() >= 4;
+    }
+
     public int getId() {
         return id;
     }
