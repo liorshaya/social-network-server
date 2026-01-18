@@ -488,5 +488,36 @@ public class DbUtils {
     }
 
 
+    public boolean toggleLike(int postId, int userId) {
+        String checkSql = "SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?";
+        String insertSql = "INSERT INTO likes (post_id, user_id) VALUES (?, ?)";
+        String deleteSql = "DELETE FROM likes WHERE post_id = ? AND user_id = ?";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(checkSql)) {
+            preparedStatement.setInt(1, postId);
+            preparedStatement.setInt(2, userId);
+
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    try (PreparedStatement deleteStmt = connection.prepareStatement(deleteSql)) {
+                        deleteStmt.setInt(1, postId);
+                        deleteStmt.setInt(2, userId);
+                        deleteStmt.executeUpdate();
+                        return false;
+                    }
+                } else {
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                        insertStmt.setInt(1, postId);
+                        insertStmt.setInt(2, userId);
+                        insertStmt.executeUpdate();
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
 }
