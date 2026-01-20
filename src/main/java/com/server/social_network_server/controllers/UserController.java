@@ -112,7 +112,8 @@ public class UserController {
             }
             int followingCount = dbUtils.getFollowingCount(foundUserId);
             int followersCount = dbUtils.getFollowersCount(foundUserId);
-            return new ProfileResponse(true, null, user, following, followingCount, followersCount);
+            int postCount = dbUtils.getPostCount(foundUserId);
+            return new ProfileResponse(true, null, user, following, followingCount, followersCount, postCount);
         } else {
             return new BasicResponse(false, Error.ERROR_TARGET_USER_NOT_EXIST);
         }

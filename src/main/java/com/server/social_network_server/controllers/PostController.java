@@ -5,6 +5,7 @@ import com.server.social_network_server.entities.Post;
 import com.server.social_network_server.response.BasicResponse;
 import com.server.social_network_server.response.PostListResponse;
 import com.server.social_network_server.response.PostResponse;
+import com.server.social_network_server.response.followCountResponse;
 import com.server.social_network_server.service.CloudinaryService;
 import com.server.social_network_server.utils.DbUtils;
 import com.server.social_network_server.utils.Error;
@@ -110,5 +111,13 @@ public class PostController {
         return new PostListResponse(true, null, posts);
     }
 
+    @GetMapping("/get-post-count")
+    public BasicResponse getPostCount(int targetUserId){
+        if(!dbUtils.isUserIdExist(targetUserId)) {
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+        int postCount = dbUtils.getPostCount(targetUserId);
+        return new followCountResponse(true, null , postCount );
+    }
 
 }

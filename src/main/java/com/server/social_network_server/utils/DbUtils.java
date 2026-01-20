@@ -520,4 +520,19 @@ public class DbUtils {
         return false;
     }
 
+    public int getPostCount(int targetUserId){
+        try {
+            PreparedStatement statement = this.connection.prepareStatement
+                    ("SELECT COUNT(*) FROM posts WHERE user_id = ?");
+            statement.setInt(1, targetUserId);
+            ResultSet resultSet = statement.executeQuery();
+            if(resultSet.next()){
+                return resultSet.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return 0;
+    }
+
 }
