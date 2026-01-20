@@ -1,5 +1,6 @@
 package com.server.social_network_server.utils;
 
+import com.server.social_network_server.dto.CommentDto;
 import com.server.social_network_server.dto.PostDto;
 import com.server.social_network_server.dto.UserWithStatus;
 import com.server.social_network_server.entities.Post;
@@ -533,6 +534,77 @@ public class DbUtils {
             throw new RuntimeException(e);
         }
         return 0;
+    }
+
+    public boolean isPostIdExist(int postId){
+        try {
+            PreparedStatement statement = this.connection.prepareStatement(
+                    "SELECT id FROM posts WHERE id = ?");
+            statement.setInt(1, postId);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()){
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public CommentDto addComment(int userId, int postId , String content){
+        String sql = "INSERT INTO comments (user_id, post_id, content) VALUES (?,?,?)";
+        try(PreparedStatement statement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+            statement.setInt(1, userId);
+            statement.setInt(2, postId);
+            statement.setString(3, content);
+
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows == 0) {
+                return null;
+            }
+
+            ResultSet generatedKeys = statement.getGeneratedKeys();
+            int newCommentId = 0;
+            if (generatedKeys.next()) {
+                newCommentId = generatedKeys.getInt(1);
+            }
+
+            return getCommentById(newCommentId);
+
+        }catch (SQLException e){
+            e.getStackTrace();
+        }
+        return null;
+    }
+
+    public CommentDto getCommentById(int commentId) {
+        try {
+            String query = "SELECT c.*, u.first_name, u.last_name, u.profile_image_url " +
+                    "FROM comments c " +
+                    "JOIN users u ON c.user_id = u.id " +
+                    "WHERE c.id = ?";
+
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setInt(1, commentId);
+            ResultSet rs = statement.executeQuery();
+
+            if (rs.next()) {
+                return new CommentDto(
+                        rs.getInt("id"),
+                        rs.getInt("post_id"),
+                        rs.getString("content"),
+                        rs.getString("created_at"),
+                        rs.getInt("user_id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("profile_image_url")
+                );
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

@@ -27,6 +27,12 @@ public class Error {
     public static final int ERROR_POST_NOT_EXIST = 4005;
     public static final int ERROR_DELETE_POST_FAILED = 4006;
 
+    public static final int ERROR_ADD_COMMENT_FAILED = 5000;
+    public static final int ERROR_MISSING_COMMENT_CONTENT = 5001;
+
+
+
+
 
 
 
