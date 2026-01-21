@@ -607,4 +607,36 @@ public class DbUtils {
         }
     }
 
+    public List<CommentDto> getCommentByPostId(int postId){
+        List<CommentDto> comments = new ArrayList<>();
+
+        try (PreparedStatement statement = this.connection.prepareStatement("SELECT c.*, u.first_name, u.last_name, u.profile_image_url " +
+                " FROM comments c " +
+                "JOIN users u ON c.user_id = u.id " +
+                "WHERE c.post_id = ? " +
+                "ORDER BY c.created_at DESC")){
+            statement.setInt(1, postId);
+
+            try(ResultSet rs = statement.executeQuery()){
+                while (rs.next()){
+                    CommentDto comment = new CommentDto(
+                            rs.getInt("id"),
+                            rs.getInt("post_id"),
+                            rs.getString("content"),
+                            rs.getString("created_at"),
+                            rs.getInt("user_id"),
+                            rs.getString("first_name"),
+                            rs.getString("last_name"),
+                            rs.getString("profile_image_url")
+                    );
+                    comments.add(comment);
+                }
+            }
+
+        }catch (SQLException e){
+            e.getStackTrace();
+        }
+        return comments;
+    }
+
 }

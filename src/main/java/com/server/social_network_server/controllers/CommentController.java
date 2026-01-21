@@ -4,13 +4,13 @@ import com.server.social_network_server.dto.AddCommentRequest;
 import com.server.social_network_server.dto.CommentDto;
 import com.server.social_network_server.response.BasicResponse;
 import com.server.social_network_server.response.CommentResponse;
+import com.server.social_network_server.response.CommentsListResponse;
 import com.server.social_network_server.utils.DbUtils;
 import com.server.social_network_server.utils.Error;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping ("/comment")
@@ -42,5 +42,14 @@ public class CommentController {
         }else{
             return new BasicResponse(false, Error.ERROR_ADD_COMMENT_FAILED);
         }
+    }
+
+    @GetMapping("/get-post-comments")
+    public BasicResponse getPostComments(int postId){
+        if(!dbUtils.isPostIdExist(postId)){
+            return new BasicResponse(false, Error.ERROR_POST_NOT_EXIST);
+        }
+        List<CommentDto> commentDtoList = dbUtils.getCommentByPostId(postId);
+        return new CommentsListResponse(true, null , commentDtoList);
     }
 }
