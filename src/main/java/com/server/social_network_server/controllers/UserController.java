@@ -1,10 +1,8 @@
 package com.server.social_network_server.controllers;
 
+import com.server.social_network_server.dto.UserSearchDto;
 import com.server.social_network_server.entities.User;
-import com.server.social_network_server.response.ProfileResponse;
-import com.server.social_network_server.response.UserListResponse;
-import com.server.social_network_server.response.BasicResponse;
-import com.server.social_network_server.response.UserResponse;
+import com.server.social_network_server.response.*;
 import com.server.social_network_server.service.CloudinaryService;
 import com.server.social_network_server.utils.DbUtils;
 import com.server.social_network_server.utils.Error;
@@ -12,6 +10,8 @@ import com.server.social_network_server.utils.HashGen;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 import static com.server.social_network_server.entities.User.createWithUsername;
 
@@ -149,6 +149,12 @@ public class UserController {
         }
 
         return new BasicResponse(false, Error.ERROR_UPDATE_FAILED);
+    }
+
+    @GetMapping("/search")
+    public BasicResponse searchUsers(@RequestParam String query) {
+        List<UserSearchDto> searchUsers = dbUtils.searchUsers(query);
+        return new SearchResponse(true, null ,searchUsers );
     }
 
 

@@ -2,6 +2,7 @@ package com.server.social_network_server.utils;
 
 import com.server.social_network_server.dto.CommentDto;
 import com.server.social_network_server.dto.PostDto;
+import com.server.social_network_server.dto.UserSearchDto;
 import com.server.social_network_server.dto.UserWithStatus;
 import com.server.social_network_server.entities.Post;
 import com.server.social_network_server.entities.User;
@@ -580,7 +581,7 @@ public class DbUtils {
 
     public CommentDto getCommentById(int commentId) {
         try {
-            String query = "SELECT c.*, u.first_name, u.last_name, u.profile_image_url " +
+            String query = "SELECT c.*, u.first_name, u.last_name, u.profile_image_url , u.username " +
                     "FROM comments c " +
                     "JOIN users u ON c.user_id = u.id " +
                     "WHERE c.id = ?";
@@ -598,7 +599,8 @@ public class DbUtils {
                         rs.getInt("user_id"),
                         rs.getString("first_name"),
                         rs.getString("last_name"),
-                        rs.getString("profile_image_url")
+                        rs.getString("profile_image_url"),
+                        rs.getString("username")
                 );
             }
             return null;
@@ -610,11 +612,11 @@ public class DbUtils {
     public List<CommentDto> getCommentByPostId(int postId){
         List<CommentDto> comments = new ArrayList<>();
 
-        try (PreparedStatement statement = this.connection.prepareStatement("SELECT c.*, u.first_name, u.last_name, u.profile_image_url " +
+        try (PreparedStatement statement = this.connection.prepareStatement("SELECT c.*, u.first_name, u.last_name, u.profile_image_url , u.username" +
                 " FROM comments c " +
                 "JOIN users u ON c.user_id = u.id " +
                 "WHERE c.post_id = ? " +
-                "ORDER BY c.created_at DESC")){
+                "ORDER BY c.created_at")){
             statement.setInt(1, postId);
 
             try(ResultSet rs = statement.executeQuery()){
@@ -625,9 +627,11 @@ public class DbUtils {
                             rs.getString("content"),
                             rs.getString("created_at"),
                             rs.getInt("user_id"),
-                            rs.getString("first_name"),
                             rs.getString("last_name"),
-                            rs.getString("profile_image_url")
+                            rs.getString("first_name"),
+                            rs.getString("profile_image_url"),
+                            rs.getString("username")
+
                     );
                     comments.add(comment);
                 }
@@ -637,6 +641,47 @@ public class DbUtils {
             e.getStackTrace();
         }
         return comments;
+    }
+
+    public List<UserSearchDto> searchUsers(String query) {
+        List<UserSearchDto> results = new ArrayList<>();
+
+        if (query == null || query.trim().isEmpty()) {
+            return results;
+        }
+
+        String sql = "SELECT id, first_name, last_name, username, profile_image_url " +
+                "FROM users " +
+                "WHERE username LIKE ? OR first_name LIKE ? OR last_name LIKE ? " +
+                "OR CONCAT(first_name, ' ', last_name) LIKE ?" +
+                "LIMIT 10";
+
+        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
+
+            String searchPattern = "%" + query + "%";
+
+            statement.setString(1, searchPattern);
+            statement.setString(2, searchPattern);
+            statement.setString(3, searchPattern);
+            statement.setString(4, searchPattern);
+
+            ResultSet rs = statement.executeQuery();
+
+            while (rs.next()) {
+                UserSearchDto user = new UserSearchDto(
+                        rs.getInt("id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("username"),
+                        rs.getString("profile_image_url")
+                );
+                results.add(user);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return results;
     }
 
 }
