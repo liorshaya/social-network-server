@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,7 @@ public class PostController {
                 return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
             }
 
-            if (hasContent && content.length() >= 500){
+            if (hasContent && content.length() > 500){
                 return new BasicResponse(false, Error.ERROR_TOO_LONG_CONTENT);
             }
 
@@ -118,6 +119,17 @@ public class PostController {
         }
         int postCount = dbUtils.getPostCount(targetUserId);
         return new followCountResponse(true, null , postCount );
+    }
+
+    @GetMapping("/get-feed")
+    public BasicResponse getFeed(int userId, int page){
+        if(!dbUtils.isUserIdExist(userId)) {
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+
+        List<PostDto> posts = dbUtils.getFeed(userId, page);
+
+        return new PostListResponse(true, null, posts);
     }
 
 }

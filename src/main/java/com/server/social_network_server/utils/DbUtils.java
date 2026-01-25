@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -682,6 +683,63 @@ public class DbUtils {
             e.printStackTrace();
         }
         return results;
+    }
+
+    public List<PostDto> getFeed(int userId, int page){
+        List<PostDto> postDtoList = new ArrayList<>();
+        int limit = 20;
+        int offset = (page - 1) * limit;
+
+        String sql = "SELECT " +
+                "p.id, p.content, p.picture_url, p.created_at, p.user_id, " +
+                "u.first_name, u.last_name, u.username, u.profile_image_url, " +
+                "(SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count, " +
+                "(SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count, " +
+                "EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked " +
+                "FROM posts p " +
+                "JOIN users u ON p.user_id = u.id " +
+                "WHERE p.user_id = ? OR p.user_id IN (SELECT target_user_id FROM user_follows WHERE followers_id = ?) " +
+                "ORDER BY p.created_at DESC " +
+                "LIMIT ? OFFSET ?";
+
+        try(PreparedStatement statement = this.connection.prepareStatement(sql)){
+            statement.setInt(1, userId);
+            statement.setInt(2, userId);
+            statement.setInt(3, userId);
+            statement.setInt(4, limit);
+            statement.setInt(5, offset);
+
+            ResultSet rs = statement.executeQuery();
+
+            while (rs.next()){
+                PostDto postDto = new PostDto();
+
+                postDto.setId(rs.getInt("id"));
+                postDto.setContent(rs.getString("content"));
+                postDto.setPictureUrl(rs.getString("picture_url"));
+                postDto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+
+                postDto.setAuthorId(rs.getInt("user_id"));
+                postDto.setAuthorFirstName(rs.getString("first_name"));
+                postDto.setAuthorLastName(rs.getString("last_name"));
+                postDto.setAuthorUsername(rs.getString("username"));
+                postDto.setAuthorProfileImage(rs.getString("profile_image_url"));
+
+                postDto.setLikeCount(rs.getInt("like_count"));
+                postDto.setCommentCount(rs.getInt("comment_count"));
+
+                postDto.setLiked(rs.getBoolean("is_liked"));
+
+                postDtoList.add(postDto);
+            }
+
+            Collections.shuffle(postDtoList);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return postDtoList;
     }
 
 }
