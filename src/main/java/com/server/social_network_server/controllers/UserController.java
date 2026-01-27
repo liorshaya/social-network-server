@@ -1,5 +1,6 @@
 package com.server.social_network_server.controllers;
 
+import com.server.social_network_server.dto.MutualFollowersDto;
 import com.server.social_network_server.dto.UserSearchDto;
 import com.server.social_network_server.entities.User;
 import com.server.social_network_server.response.*;
@@ -27,10 +28,11 @@ public class UserController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
     private User user;
 
 
-    @RequestMapping("/allUsers")
+    @GetMapping("/allUsers")
     public BasicResponse getAllUsers(){
         return new UserListResponse(true, null , dbUtils.getAllUsers());
     }
@@ -75,7 +77,7 @@ public class UserController {
     }
 
 
-    @RequestMapping("/login")
+    @GetMapping("/login")
     public BasicResponse login(String username, String password){
         if(username == null || username.isEmpty()){
             return new BasicResponse(false, Error.ERROR_MISSING_USERNAME);
@@ -93,7 +95,7 @@ public class UserController {
     }
 
     // myUserId - connected user - will change to get from cookies :D
-    @RequestMapping("/get-user-info")
+    @GetMapping("/get-user-info")
     public BasicResponse getUserInfo(int myUserId, Integer targetUserId, String targetUsername){
         User user = null;
         if (targetUserId != null) {
@@ -113,7 +115,11 @@ public class UserController {
             int followingCount = dbUtils.getFollowingCount(foundUserId);
             int followersCount = dbUtils.getFollowersCount(foundUserId);
             int postCount = dbUtils.getPostCount(foundUserId);
-            return new ProfileResponse(true, null, user, following, followingCount, followersCount, postCount);
+            List<MutualFollowersDto> mutuals = dbUtils.getMutualFollowers(myUserId, foundUserId);
+            ProfileResponse response = new ProfileResponse(true, null, user, following, followingCount, followersCount, postCount);
+            response.setMutualFollowers(mutuals);
+            //return new ProfileResponse(true, null, user, following, followingCount, followersCount, postCount);
+            return response;
         } else {
             return new BasicResponse(false, Error.ERROR_TARGET_USER_NOT_EXIST);
         }
@@ -155,6 +161,19 @@ public class UserController {
     public BasicResponse searchUsers(@RequestParam String query) {
         List<UserSearchDto> searchUsers = dbUtils.searchUsers(query);
         return new SearchResponse(true, null ,searchUsers );
+    }
+
+    @GetMapping("/get-mutual-followers")
+    public BasicResponse getMutualFollowers(int userId, int targetUserId){
+        if(!dbUtils.isUserIdExist(userId)) {
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+        if(!dbUtils.isUserIdExist(targetUserId)) {
+            return new BasicResponse(false, Error.ERROR_USER_NOT_EXIST);
+        }
+
+        List<MutualFollowersDto> mutualList = dbUtils.getMutualFollowers(userId, targetUserId);
+        return new MutualListResponse(true, null, mutualList);
     }
 
 

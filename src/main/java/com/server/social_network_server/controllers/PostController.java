@@ -1,7 +1,9 @@
 package com.server.social_network_server.controllers;
 
 import com.server.social_network_server.dto.PostDto;
+import com.server.social_network_server.dto.UserSearchDto;
 import com.server.social_network_server.entities.Post;
+import com.server.social_network_server.entities.User;
 import com.server.social_network_server.response.BasicResponse;
 import com.server.social_network_server.response.PostListResponse;
 import com.server.social_network_server.response.PostResponse;
@@ -27,6 +29,8 @@ public class PostController {
 
     @Autowired
     private DbUtils dbUtils;
+    @Autowired
+    private User user;
 
     @PostMapping("/create")
     public BasicResponse createPost(
@@ -128,8 +132,13 @@ public class PostController {
         }
 
         List<PostDto> posts = dbUtils.getFeed(userId, page);
+        PostListResponse response = new PostListResponse(true , null , posts);
 
-        return new PostListResponse(true, null, posts);
+        if (page == 0 || page == 1) {
+            List<UserSearchDto> suggestions = dbUtils.getSuggestions(userId);
+            response.setSuggestions(suggestions);
+        }
+        return response;
     }
 
 }

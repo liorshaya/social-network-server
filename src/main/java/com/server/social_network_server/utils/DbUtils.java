@@ -1,9 +1,6 @@
 package com.server.social_network_server.utils;
 
-import com.server.social_network_server.dto.CommentDto;
-import com.server.social_network_server.dto.PostDto;
-import com.server.social_network_server.dto.UserSearchDto;
-import com.server.social_network_server.dto.UserWithStatus;
+import com.server.social_network_server.dto.*;
 import com.server.social_network_server.entities.Post;
 import com.server.social_network_server.entities.User;
 import jakarta.annotation.PostConstruct;
@@ -11,9 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class DbUtils {
@@ -741,5 +736,176 @@ public class DbUtils {
 
         return postDtoList;
     }
+
+    public List<MutualFollowersDto> getMutualFollowers(int userId, int targetUserId){
+        List<MutualFollowersDto> mutuals = new ArrayList<>();
+
+        if (userId == targetUserId) {
+            return mutuals;
+        }
+        try(PreparedStatement statement = this.connection.prepareStatement("SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url FROM users u " +
+                                                                                  "JOIN user_follows tar ON u.id = tar.followers_id " +
+                                                                                   "JOIN user_follows me ON u.id = me.target_user_id " +
+                                                                                     "WHERE tar.target_user_id = ? AND me.followers_id = ?")){
+        statement.setInt(1, targetUserId);
+        statement.setInt(2, userId);
+
+        ResultSet resultSet = statement.executeQuery();
+        while(resultSet.next()){
+            MutualFollowersDto mutual = new MutualFollowersDto(
+                    resultSet.getInt("id"),
+                    resultSet.getString("first_name"),
+                    resultSet.getString("last_name"),
+                    resultSet.getString("username"),
+                    resultSet.getString("profile_image_url")
+            );
+            mutuals.add(mutual);
+        }
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return mutuals;
+    }
+
+    public List<UserSearchDto> getSuggestions(int currentUserId) {
+        final int TARGET_SIZE = 5;
+        List<UserSearchDto> suggestions = new ArrayList<>();
+        Set<Integer> excludedIds = new HashSet<>();
+
+        try {
+            // =========================================================
+            // שלב 0: בדיקה אם המשתמש עוקב אחרי מישהו בכלל
+            // =========================================================
+            boolean hasFollowing = false;
+            String checkFollowingSql =
+                    "SELECT 1 FROM user_follows WHERE followers_id = ? LIMIT 1";
+
+            try (PreparedStatement stmt = connection.prepareStatement(checkFollowingSql)) {
+                stmt.setInt(1, currentUserId);
+                ResultSet rs = stmt.executeQuery();
+                hasFollowing = rs.next();
+            }
+
+            // =========================================================
+            // מקרה 1: משתמש חדש → מחזירים משתמשים פופולריים
+            // =========================================================
+            if (!hasFollowing) {
+                String popularSql =
+                        "SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url " +
+                                "FROM users u " +
+                                "LEFT JOIN user_follows f ON u.id = f.target_user_id " +
+                                "LEFT JOIN user_follows existing " +
+                                "       ON u.id = existing.target_user_id AND existing.followers_id = ? " +
+                                "WHERE u.id != ? " +
+                                "AND existing.target_user_id IS NULL " +
+                                "GROUP BY u.id " +
+                                "ORDER BY COUNT(f.followers_id) DESC " +
+                                "LIMIT ?";
+
+                try (PreparedStatement stmt = connection.prepareStatement(popularSql)) {
+                    stmt.setInt(1, currentUserId);
+                    stmt.setInt(2, currentUserId);
+                    stmt.setInt(3, TARGET_SIZE);
+
+                    ResultSet rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        suggestions.add(new UserSearchDto(
+                                rs.getInt("id"),
+                                rs.getString("first_name"),
+                                rs.getString("last_name"),
+                                rs.getString("username"),
+                                rs.getString("profile_image_url")
+                        ));
+                    }
+                }
+
+                return suggestions;
+            }
+
+            // =========================================================
+            // מקרה 2: יש FOLLOWING → Friends of Friends
+            // =========================================================
+            String graphSql =
+                    "SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url, " +
+                            "COUNT(DISTINCT f1.followers_id) AS mutual_connections " +
+                            "FROM users u " +
+                            "JOIN user_follows f2 ON u.id = f2.target_user_id " +
+                            "JOIN user_follows f1 ON f2.followers_id = f1.target_user_id " +
+                            "LEFT JOIN user_follows existing " +
+                            "       ON u.id = existing.target_user_id AND existing.followers_id = ? " +
+                            "WHERE f1.followers_id = ? " +
+                            "AND u.id != ? " +
+                            "AND existing.target_user_id IS NULL " +
+                            "GROUP BY u.id " +
+                            "ORDER BY mutual_connections DESC " +
+                            "LIMIT ?";
+
+            try (PreparedStatement stmt = connection.prepareStatement(graphSql)) {
+                stmt.setInt(1, currentUserId);
+                stmt.setInt(2, currentUserId);
+                stmt.setInt(3, currentUserId);
+                stmt.setInt(4, TARGET_SIZE);
+
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    UserSearchDto user = new UserSearchDto(
+                            rs.getInt("id"),
+                            rs.getString("first_name"),
+                            rs.getString("last_name"),
+                            rs.getString("username"),
+                            rs.getString("profile_image_url")
+                    );
+                    suggestions.add(user);
+                    excludedIds.add(user.getId());
+                }
+            }
+
+            // =========================================================
+            // השלמה לפופולריים אם אין מספיק
+            // =========================================================
+            int limitNeeded = TARGET_SIZE - suggestions.size();
+
+            if (limitNeeded > 0) {
+                String fallbackSql =
+                        "SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url " +
+                                "FROM users u " +
+                                "LEFT JOIN user_follows f ON u.id = f.target_user_id " +
+                                "LEFT JOIN user_follows existing " +
+                                "       ON u.id = existing.target_user_id AND existing.followers_id = ? " +
+                                "WHERE u.id != ? " +
+                                "AND existing.target_user_id IS NULL " +
+                                "GROUP BY u.id " +
+                                "ORDER BY COUNT(f.followers_id) DESC " +
+                                "LIMIT ?";
+
+                try (PreparedStatement stmt = connection.prepareStatement(fallbackSql)) {
+                    stmt.setInt(1, currentUserId);
+                    stmt.setInt(2, currentUserId);
+                    stmt.setInt(3, limitNeeded + 5);
+
+                    ResultSet rs = stmt.executeQuery();
+                    while (rs.next() && suggestions.size() < TARGET_SIZE) {
+                        int id = rs.getInt("id");
+                        if (!excludedIds.contains(id)) {
+                            suggestions.add(new UserSearchDto(
+                                    id,
+                                    rs.getString("first_name"),
+                                    rs.getString("last_name"),
+                                    rs.getString("username"),
+                                    rs.getString("profile_image_url")
+                            ));
+                            excludedIds.add(id);
+                        }
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return suggestions;
+    }
+
 
 }

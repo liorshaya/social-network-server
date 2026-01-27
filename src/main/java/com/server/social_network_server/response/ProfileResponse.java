@@ -1,5 +1,6 @@
 package com.server.social_network_server.response;
 
+import com.server.social_network_server.dto.MutualFollowersDto;
 import com.server.social_network_server.entities.User;
 
 import java.util.List;
@@ -9,6 +10,7 @@ public class ProfileResponse extends UserResponse{
     private int followingCount;
     private int followersCount;
     private int postCount;
+    private List<MutualFollowersDto> mutualFollowers;
 
 
     public ProfileResponse(boolean success, Integer errorCode, User user,
@@ -39,6 +41,14 @@ public class ProfileResponse extends UserResponse{
 
     public int getPostCount() {
         return postCount;
+    }
+
+    public List<MutualFollowersDto> getMutualFollowers() {
+        return mutualFollowers;
+    }
+
+    public void setMutualFollowers(List<MutualFollowersDto> mutualFollowers) {
+        this.mutualFollowers = mutualFollowers;
     }
 
 }

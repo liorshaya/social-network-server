@@ -1,11 +1,13 @@
 package com.server.social_network_server.response;
 
 import com.server.social_network_server.dto.PostDto;
+import com.server.social_network_server.dto.UserSearchDto;
 
 import java.util.List;
 
 public class PostListResponse extends BasicResponse{
     private List<PostDto> posts;
+    private List<UserSearchDto> suggestions;
 
     public PostListResponse(List<PostDto> posts) {
         this.posts = posts;
@@ -14,6 +16,14 @@ public class PostListResponse extends BasicResponse{
     public PostListResponse(boolean success, Integer errorCode, List<PostDto> posts) {
         super(success, errorCode);
         this.posts = posts;
+    }
+
+    public List<UserSearchDto> getSuggestions() {
+        return suggestions;
+    }
+
+    public void setSuggestions(List<UserSearchDto> suggestions) {
+        this.suggestions = suggestions;
     }
 
     public List<PostDto> getPosts() {
