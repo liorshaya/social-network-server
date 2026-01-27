@@ -773,9 +773,7 @@ public class DbUtils {
         Set<Integer> excludedIds = new HashSet<>();
 
         try {
-            // =========================================================
-            // שלב 0: בדיקה אם המשתמש עוקב אחרי מישהו בכלל
-            // =========================================================
+
             boolean hasFollowing = false;
             String checkFollowingSql =
                     "SELECT 1 FROM user_follows WHERE followers_id = ? LIMIT 1";
@@ -786,9 +784,7 @@ public class DbUtils {
                 hasFollowing = rs.next();
             }
 
-            // =========================================================
-            // מקרה 1: משתמש חדש → מחזירים משתמשים פופולריים
-            // =========================================================
+
             if (!hasFollowing) {
                 String popularSql =
                         "SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url " +
@@ -822,9 +818,7 @@ public class DbUtils {
                 return suggestions;
             }
 
-            // =========================================================
-            // מקרה 2: יש FOLLOWING → Friends of Friends
-            // =========================================================
+
             String graphSql =
                     "SELECT u.id, u.first_name, u.last_name, u.username, u.profile_image_url, " +
                             "COUNT(DISTINCT f1.followers_id) AS mutual_connections " +
@@ -860,9 +854,6 @@ public class DbUtils {
                 }
             }
 
-            // =========================================================
-            // השלמה לפופולריים אם אין מספיק
-            // =========================================================
             int limitNeeded = TARGET_SIZE - suggestions.size();
 
             if (limitNeeded > 0) {
